@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Agent - Interface Opérateur</title>
+    <link rel="stylesheet" href="../styles/operator.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header avec état et contrôles globaux -->
+        <header class="header">
+            <h1>🎮 Interface Opérateur</h1>
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="label">Condition:</span>
+                    <span id="currentCondition" class="value">Humain</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">État:</span>
+                    <span id="currentState" class="value">Idle</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">Statut:</span>
+                    <span id="playStatus" class="value">Arrêté</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <!-- Section Configuration -->
+            <section class="config-section">
+                <h2>⚙️ Configuration</h2>
+                
+                <div class="config-group">
+                    <label>Condition Expérimentale</label>
+                    <div class="condition-selector">
+                        <button id="conditionHuman" class="condition-btn active">
+                            👤 Humain Réaliste
+                        </button>
+                        <button id="conditionAbstract" class="condition-btn">
+                            🔵 Abstrait
+                        </button>
+                    </div>
+                </div>
+
+                <div class="config-group">
+                    <label for="fadeSpeed">Vitesse de Fondu (ms)</label>
+                    <div class="slider-container">
+                        <input type="range" id="fadeSpeed" min="100" max="2000" value="500" step="100">
+                        <span id="fadeSpeedValue" class="slider-value">500ms</span>
+                    </div>
+                </div>
+
+                <div class="config-group">
+                    <label for="volume">Volume</label>
+                    <div class="slider-container">
+                        <input type="range" id="volume" min="0" max="100" value="80" step="1">
+                        <span id="volumeValue" class="slider-value">80%</span>
+                    </div>
+                </div>
+
+                <div class="config-group">
+                    <button id="preloadBtn" class="action-btn secondary">
+                        📥 Précharger Médias Critiques
+                    </button>
+                </div>
+            </section>
+
+            <!-- Section Contrôles Principaux -->
+            <section class="controls-section">
+                <h2>🎬 Contrôles de l'Agent</h2>
+
+                <!-- États Spéciaux -->
+                <div class="state-controls">
+                    <h3>États Principaux</h3>
+                    <div class="state-buttons">
+                        <button id="stateWelcome" class="state-btn welcome">
+                            👋 Welcome
+                        </button>
+                        <button id="stateIdle" class="state-btn idle">
+                            ⏸️ Idle
+                        </button>
+                        <button id="stateClosing" class="state-btn closing">
+                            👋 Closing
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Questions -->
+                <div class="questions-controls">
+                    <h3>Questions sur l'Égypte Ancienne</h3>
+                    <div class="questions-grid">
+                        <button class="question-btn" data-question="q1">
+                            <span class="q-num">Q1</span>
+                            <span class="q-text">Transport des blocs de pierre</span>
+                        </button>
+                        <button class="question-btn" data-question="q2">
+                            <span class="q-num">Q2</span>
+                            <span class="q-text">Organisation des chantiers</span>
+                        </button>
+                        <button class="question-btn" data-question="q3">
+                            <span class="q-num">Q3</span>
+                            <span class="q-text">Techniques de construction</span>
+                        </button>
+                        <button class="question-btn" data-question="q4">
+                            <span class="q-num">Q4</span>
+                            <span class="q-text">Durée de construction</span>
+                        </button>
+                        <button class="question-btn" data-question="q5">
+                            <span class="q-num">Q5</span>
+                            <span class="q-text">Ouvriers et artisans</span>
+                        </button>
+                        <button class="question-btn" data-question="q6">
+                            <span class="q-num">Q6</span>
+                            <span class="q-text">Mystères et légendes</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Contrôles d'urgence -->
+                <div class="emergency-controls">
+                    <button id="stopBtn" class="action-btn danger">
+                        🛑 STOP
+                    </button>
+                    <button id="resetBtn" class="action-btn warning" style="margin-top: 10px;">
+                        🔄 Reset (Redémarrer Idle)
+                    </button>
+                </div>
+            </section>
+
+            <!-- Section Logs -->
+            <section class="logs-section">
+                <h2>📋 Journal d'Activité</h2>
+                <div class="logs-controls">
+                    <button id="clearLogsBtn" class="small-btn">Effacer</button>
+                    <button id="exportLogsBtn" class="small-btn">Exporter</button>
+                </div>
+                <div id="logsContainer" class="logs-container">
+                    <!-- Les logs apparaîtront ici -->
+                </div>
+            </section>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-info">
+                <span>Virtual Agent v1.0</span>
+                <span>•</span>
+                <span id="connectionStatus">✅ Connecté</span>
+                <span>•</span>
+                <span id="clock">--:--:--</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="../renderer/operator.js"></script>
+</body>
+</html>

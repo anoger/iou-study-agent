@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Test des chemins vidéo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        h1 { color: #5a67d8; }
+        .test-video {
+            margin: 20px 0;
+            padding: 20px;
+            background: #2d2d2d;
+            border-radius: 8px;
+        }
+        video {
+            width: 300px;
+            height: 200px;
+            background: #000;
+            border: 2px solid #5a67d8;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success { background: #22543d; }
+        .error { background: #742a2a; }
+        .info { background: #2c5282; }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            background: #5a67d8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover { background: #4c51bf; }
+    </style>
+</head>
+<body>
+    <h1>Test des chemins vidéo - Virtual Agent</h1>
+    
+    <div class="test-video">
+        <h2>Test 1: Chemin relatif direct</h2>
+        <p>Chemin: ../../assets/videos/idle.mp4</p>
+        <video id="video1" controls></video>
+        <div id="status1" class="status info">Non testé</div>
+        <button onclick="testVideo1()">Tester</button>
+    </div>
+
+    <div class="test-video">
+        <h2>Test 2: Chemin absolu file://</h2>
+        <p id="path2">Chemin: (sera calculé)</p>
+        <video id="video2" controls></video>
+        <div id="status2" class="status info">Non testé</div>
+        <button onclick="testVideo2()">Tester</button>
+    </div>
+
+    <div class="test-video">
+        <h2>Infos de debug</h2>
+        <pre id="debug"></pre>
+    </div>
+
+    <script>
+        // Afficher les infos de base
+        document.getElementById('debug').textContent = `
+Location: ${window.location.href}
+Protocol: ${window.location.protocol}
+Pathname: ${window.location.pathname}
+User Agent: ${navigator.userAgent}
+        `;
+
+        function testVideo1() {
+            const video = document.getElementById('video1');
+            const status = document.getElementById('status1');
+            
+            video.src = '../../assets/videos/idle.mp4';
+            
+            video.addEventListener('loadedmetadata', () => {
+                status.className = 'status success';
+                status.textContent = '✅ Vidéo chargée avec succès!';
+                console.log('Video 1 loaded:', video.src);
+            }, { once: true });
+            
+            video.addEventListener('error', (e) => {
+                status.className = 'status error';
+                const error = video.error;
+                status.textContent = `❌ Erreur: ${error ? `Code ${error.code} - ${error.message}` : 'Inconnue'}`;
+                console.error('Video 1 error:', error);
+            }, { once: true });
+            
+            video.load();
+        }
+
+        function testVideo2() {
+            const video = document.getElementById('video2');
+            const status = document.getElementById('status2');
+            const pathEl = document.getElementById('path2');
+            
+            // Construire le chemin absolu
+            const currentPath = window.location.pathname;
+            const pathParts = currentPath.split('/');
+            pathParts.pop(); // Enlever le fichier HTML
+            pathParts.pop(); // Enlever renderer
+            pathParts.pop(); // Enlever src
+            
+            const basePath = pathParts.join('/');
+            const fullPath = `file://${basePath}/assets/videos/idle.mp4`;
+            
+            pathEl.textContent = `Chemin: ${fullPath}`;
+            video.src = fullPath;
+            
+            video.addEventListener('loadedmetadata', () => {
+                status.className = 'status success';
+                status.textContent = '✅ Vidéo chargée avec succès!';
+                console.log('Video 2 loaded:', video.src);
+            }, { once: true });
+            
+            video.addEventListener('error', (e) => {
+                status.className = 'status error';
+                const error = video.error;
+                status.textContent = `❌ Erreur: ${error ? `Code ${error.code} - ${error.message}` : 'Inconnue'}`;
+                console.error('Video 2 error:', error);
+            }, { once: true });
+            
+            video.load();
+        }
+
+        // Test automatique au chargement
+        setTimeout(() => {
+            console.log('Test automatique...');
+            testVideo1();
+        }, 500);
+    </script>
+</body>
+</html>

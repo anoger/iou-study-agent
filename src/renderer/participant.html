@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Agent - Vue Participant</title>
+    <link rel="stylesheet" href="../styles/participant.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Condition Humaine: Vidéos -->
+        <div id="humanCondition" class="condition-view active">
+            <!-- Double buffering pour transitions fluides -->
+            <video id="videoPlayer1" class="video-player active" preload="auto" playsinline></video>
+            <video id="videoPlayer2" class="video-player" preload="auto" playsinline></video>
+            
+            <!-- Indicateur de chargement -->
+            <div id="loadingIndicator" class="loading-indicator">
+                <div class="spinner"></div>
+                <span>Chargement...</span>
+            </div>
+        </div>
+
+        <!-- Condition Abstraite: Animation Canvas -->
+        <div id="abstractCondition" class="condition-view">
+            <canvas id="audioCanvas"></canvas>
+            
+            <!-- Audio player caché pour la condition abstraite -->
+            <audio id="audioPlayer" preload="auto"></audio>
+            
+            <!-- Animation de veille -->
+            <div id="abstractIdle" class="abstract-idle">
+                <div class="pulse-circle"></div>
+                <div class="wave-container">
+                    <div class="wave wave1"></div>
+                    <div class="wave wave2"></div>
+                    <div class="wave wave3"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overlay pour les transitions -->
+        <div id="transitionOverlay" class="transition-overlay"></div>
+
+        <!-- Message d'erreur -->
+        <div id="errorMessage" class="error-message">
+            <div class="error-content">
+                <span class="error-icon">⚠️</span>
+                <p id="errorText">Une erreur est survenue</p>
+                <button id="errorClose">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../renderer/participant.js"></script>
+</body>
+</html>
