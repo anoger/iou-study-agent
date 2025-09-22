@@ -34,6 +34,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('volume:set', (event, volume) => callback(volume));
   },
   
+  onToggleVeil: (callback) => {
+    ipcRenderer.on('veil:toggle', (event, show) => callback(show));
+  },
+  
   onStateUpdate: (callback) => {
     ipcRenderer.on('state:update', (event, state) => callback(state));
   },
@@ -46,6 +50,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.removeAllListeners('condition:change');
     ipcRenderer.removeAllListeners('fade:setSpeed');
     ipcRenderer.removeAllListeners('volume:set');
+    ipcRenderer.removeAllListeners('veil:toggle');
     ipcRenderer.removeAllListeners('state:update');
   }
 });

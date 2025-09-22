@@ -15,6 +15,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   changeCondition: (condition) => ipcRenderer.invoke('condition:change', condition),
   setFadeSpeed: (speed) => ipcRenderer.invoke('fade:setSpeed', speed),
   setVolume: (volume) => ipcRenderer.invoke('volume:set', volume),
+  toggleVeil: (show) => ipcRenderer.invoke('veil:toggle', show),
+  
+  // Contrôle de la fenêtre
+  toggleFullscreen: () => ipcRenderer.invoke('window:toggleFullscreen'),
+  setFullscreen: (fullscreen) => ipcRenderer.invoke('window:setFullscreen', fullscreen),
+  isFullscreen: () => ipcRenderer.invoke('window:isFullscreen'),
   
   // Logging
   writeLog: (data) => ipcRenderer.invoke('log:write', data),
@@ -32,10 +38,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('media:error', (event, error) => callback(error));
   },
   
+  onFullscreenChanged: (callback) => {
+    ipcRenderer.on('fullscreen:changed', (event, isFullscreen) => callback(isFullscreen));
+  },
+  
+  onVeilChanged: (callback) => {
+    ipcRenderer.on('veil:changed', (event, show) => callback(show));
+  },
+  
   // Nettoyage
   removeAllListeners: () => {
     ipcRenderer.removeAllListeners('state:update');
     ipcRenderer.removeAllListeners('media:ended');
     ipcRenderer.removeAllListeners('media:error');
+    ipcRenderer.removeAllListeners('fullscreen:changed');
   }
 });

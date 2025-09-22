@@ -12,6 +12,8 @@ class OperatorController {
         this.logs = [];
         this.maxLogs = 100;
         
+        this.veilActive = true; // Le voile est actif au démarrage
+        
         this.init();
     }
 
@@ -93,9 +95,19 @@ class OperatorController {
             this.resetToIdle();
         });
         
+        // Bouton Voile
+        document.getElementById('toggleVeil').addEventListener('click', () => {
+            this.toggleVeil();
+        });
+        
         // Préchargement
         document.getElementById('preloadBtn').addEventListener('click', () => {
             this.preloadAllMedia();
+        });
+
+        // Contrôle plein écran
+        document.getElementById('fullscreenBtn').addEventListener('click', () => {
+            this.toggleFullscreen();
         });
 
         // Logs
@@ -124,6 +136,11 @@ class OperatorController {
         // Erreur média
         window.electronAPI.onMediaError((error) => {
             this.addLog('error', `Erreur média: ${error.message || error}`);
+        });
+
+        // Changement d'état plein écran
+        window.electronAPI.onFullscreenChanged((isFullscreen) => {
+            this.updateFullscreenStatus(isFullscreen);
         });
     }
 
@@ -217,6 +234,31 @@ class OperatorController {
         
         this.addLog('success', 'Réinitialisation réussie');
     }
+    
+    async toggleVeil() {
+        this.veilActive = !this.veilActive;
+        
+        try {
+            const result = await window.electronAPI.toggleVeil(this.veilActive);
+            if (result.success) {
+                // Mettre à jour le bouton
+                const btn = document.getElementById('toggleVeil');
+                if (this.veilActive) {
+                    btn.textContent = '🎭 Retirer le voile noir';
+                    btn.classList.remove('warning');
+                    btn.classList.add('primary');
+                    this.addLog('info', 'Voile noir activé');
+                } else {
+                    btn.textContent = '🎭 Remettre le voile noir';
+                    btn.classList.remove('primary');
+                    btn.classList.add('warning');
+                    this.addLog('success', 'Voile noir retiré - Les participants peuvent voir l\'agent');
+                }
+            }
+        } catch (error) {
+            this.addLog('error', `Erreur contrôle voile: ${error.message}`);
+        }
+    }
 
     async setFadeSpeed(speed) {
         try {
@@ -264,6 +306,33 @@ class OperatorController {
             }
         } catch (error) {
             this.addLog('error', `Erreur préchargement: ${error.message}`);
+        }
+    }
+
+    async toggleFullscreen() {
+        try {
+            const result = await window.electronAPI.toggleFullscreen();
+            if (result.success) {
+                this.updateFullscreenStatus(result.isFullscreen);
+                this.addLog('info', `Mode ${result.isFullscreen ? 'plein écran' : 'fenêtré'} activé`);
+            }
+        } catch (error) {
+            this.addLog('error', `Erreur changement plein écran: ${error.message}`);
+        }
+    }
+
+    updateFullscreenStatus(isFullscreen) {
+        const statusDiv = document.getElementById('fullscreenStatus');
+        const btn = document.getElementById('fullscreenBtn');
+        
+        if (isFullscreen) {
+            statusDiv.textContent = 'Mode: Plein Écran';
+            statusDiv.style.color = '#48bb78';
+            btn.innerHTML = '🔳 Quitter Plein Écran';
+        } else {
+            statusDiv.textContent = 'Mode: Fenêtré';
+            statusDiv.style.color = '#5a67d8';
+            btn.innerHTML = '🔲 Basculer Plein Écran';
         }
     }
 

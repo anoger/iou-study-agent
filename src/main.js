@@ -69,12 +69,16 @@ function createParticipantWindow() {
   const targetDisplay = externalDisplay || displays[0];
   
   participantWindow = new BrowserWindow({
-    x: targetDisplay.bounds.x,
-    y: targetDisplay.bounds.y,
-    width: targetDisplay.bounds.width,
-    height: targetDisplay.bounds.height,
-    fullscreen: !CONFIG.DEV_MODE,
+    x: targetDisplay.bounds.x + 100, // Décalage pour pouvoir la déplacer
+    y: targetDisplay.bounds.y + 100,
+    width: Math.min(targetDisplay.bounds.width - 200, 1280), // Taille initiale raisonnable
+    height: Math.min(targetDisplay.bounds.height - 200, 720), // Format 16:9
+    minWidth: 640,
+    minHeight: 360,
+    fullscreen: false, // Démarrer en mode fenêtré
     fullscreenable: true,
+    movable: true, // Permettre le déplacement
+    resizable: true, // Permettre le redimensionnement
     title: 'Virtual Agent - Participant',
     webPreferences: {
       preload: path.join(__dirname, 'preload', 'preload-participant.js'),
@@ -87,8 +91,9 @@ function createParticipantWindow() {
     },
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     show: false,
-    frame: CONFIG.DEV_MODE,
-    skipTaskbar: !CONFIG.DEV_MODE
+    frame: true, // Toujours afficher le cadre pour pouvoir déplacer
+    skipTaskbar: false,
+    backgroundColor: '#000000'
   });
 
   participantWindow.loadFile(path.join(__dirname, 'renderer', 'participant.html'));
@@ -211,6 +216,20 @@ ipcMain.handle('volume:set', (event, volume) => {
   return { success: true, volume: validVolume };
 });
 
+// Contrôle du voile noir
+ipcMain.handle('veil:toggle', (event, show) => {
+  if (participantWindow) {
+    participantWindow.webContents.send('veil:toggle', show);
+  }
+  
+  // Notifier l'opérateur aussi
+  if (operatorWindow && event.sender !== operatorWindow.webContents) {
+    operatorWindow.webContents.send('veil:changed', show);
+  }
+  
+  return { success: true, show };
+});
+
 // Gestion des logs
 ipcMain.handle('log:write', (event, logData) => {
   const timestamp = new Date().toISOString();
@@ -256,6 +275,43 @@ ipcMain.on('media:error', (event, error) => {
   if (operatorWindow) {
     operatorWindow.webContents.send('media:error', error);
   }
+});
+
+// Contrôle du plein écran
+ipcMain.handle('window:toggleFullscreen', () => {
+  if (participantWindow) {
+    const isFullscreen = participantWindow.isFullScreen();
+    participantWindow.setFullScreen(!isFullscreen);
+    
+    // Notifier l'opérateur du changement
+    if (operatorWindow) {
+      operatorWindow.webContents.send('fullscreen:changed', !isFullscreen);
+    }
+    
+    return { success: true, isFullscreen: !isFullscreen };
+  }
+  return { success: false, error: 'Participant window not found' };
+});
+
+ipcMain.handle('window:setFullscreen', (event, fullscreen) => {
+  if (participantWindow) {
+    participantWindow.setFullScreen(fullscreen);
+    
+    // Notifier l'opérateur du changement
+    if (operatorWindow) {
+      operatorWindow.webContents.send('fullscreen:changed', fullscreen);
+    }
+    
+    return { success: true, isFullscreen: fullscreen };
+  }
+  return { success: false, error: 'Participant window not found' };
+});
+
+ipcMain.handle('window:isFullscreen', () => {
+  if (participantWindow) {
+    return { success: true, isFullscreen: participantWindow.isFullScreen() };
+  }
+  return { success: false, error: 'Participant window not found' };
 });
 
 // Obtenir le chemin des assets

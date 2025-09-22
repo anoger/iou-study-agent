@@ -185,6 +185,18 @@ section h3 {
     font-weight: 600;
 }
 
+/* Indicateur de statut */
+.status-indicator {
+    margin-top: 8px;
+    padding: 6px 12px;
+    background: var(--bg-dark);
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
 /* Boutons d'action */
 .action-btn {
     width: 100%;
@@ -208,6 +220,17 @@ section h3 {
     background: #38a169;
     transform: translateY(-2px);
     box-shadow: 0 4px 10px rgba(72, 187, 120, 0.3);
+}
+
+.action-btn.primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.action-btn.primary:hover {
+    background: #4c51bf;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(90, 103, 216, 0.3);
 }
 
 .action-btn.danger {

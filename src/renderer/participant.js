@@ -38,16 +38,23 @@ class ParticipantView {
         // Chemin des assets
         this.assetsPath = null;
         
+        // Voile noir
+        this.blackVeil = null;
+        
         this.init();
     }
 
     async init() {
+        console.log('[INIT] Initialisation de la vue participant...');
+        console.log('[INIT] Condition initiale:', this.condition);
+        
         // Références aux éléments DOM
         this.videoPlayer1 = document.getElementById('videoPlayer1');
         this.videoPlayer2 = document.getElementById('videoPlayer2');
         this.audioPlayer = document.getElementById('audioPlayer');
         this.canvas = document.getElementById('audioCanvas');
         this.canvasCtx = this.canvas.getContext('2d');
+        this.blackVeil = document.getElementById('blackVeil');
         
         // Configuration initiale
         this.setupVideoPlayers();
@@ -56,9 +63,16 @@ class ParticipantView {
         this.setupEventListeners();
         this.setupIPCListeners();
         
-        // Précharger l'idle immédiatement
-        console.log('[INIT] Préchargement de idle...');
-        await this.preloadMedia(['idle']);
+        // Précharger l'idle immédiatement (seulement si en condition humaine)
+        if (this.condition === 'human') {
+            console.log('[INIT] Préchargement de idle...');
+            await this.preloadMedia(['idle']);
+        }
+        
+        // Si condition abstraite, masquer l'animation CSS
+        if (this.condition === 'abstract') {
+            document.getElementById('abstractIdle').style.display = 'none';
+        }
         
         // Démarrer en idle
         console.log('[INIT] Démarrage en idle...');
@@ -171,20 +185,32 @@ class ParticipantView {
         this.audioPlayer.volume = this.volume;
         
         this.audioPlayer.addEventListener('ended', () => {
-            this.handleMediaEnded();
+            // Ne traiter que si ce n'est pas l'idle
+            if (this.currentMedia && this.currentMedia !== 'idle') {
+                this.handleMediaEnded();
+            }
         });
         
         this.audioPlayer.addEventListener('error', (e) => {
-            this.handleMediaError(`Erreur audio: ${e.message || 'Inconnue'}`);
+            // Ne traiter l'erreur que si on a vraiment une source audio
+            // Ignorer les erreurs quand on vide volontairement la source
+            if (this.audioPlayer.src && this.audioPlayer.src !== '') {
+                const error = this.audioPlayer.error;
+                let errorMsg = 'Erreur audio inconnue';
+                if (error) {
+                    switch(error.code) {
+                        case 1: errorMsg = 'Chargement interrompu'; break;
+                        case 2: errorMsg = 'Erreur réseau'; break;
+                        case 3: errorMsg = 'Décodage impossible'; break;
+                        case 4: errorMsg = 'Format non supporté ou fichier introuvable'; break;
+                    }
+                }
+                console.error('[AUDIO ERROR]', errorMsg);
+                this.handleMediaError(`Audio: ${errorMsg}`);
+            }
         });
         
-        this.audioPlayer.addEventListener('play', () => {
-            this.startAudioVisualization();
-        });
-        
-        this.audioPlayer.addEventListener('pause', () => {
-            this.stopAudioVisualization();
-        });
+        // Note: pas de listeners pour play/pause car on gère la visualisation manuellement
     }
 
     setupCanvas() {
@@ -192,6 +218,12 @@ class ParticipantView {
         const resizeCanvas = () => {
             this.canvas.width = window.innerWidth;
             this.canvas.height = window.innerHeight;
+            
+            // Si on est en condition abstraite et en idle, redémarrer l'animation
+            if (this.condition === 'abstract' && this.currentMedia === 'idle' && !this.animationId) {
+                console.log('[CANVAS RESIZE] Redémarrage animation idle');
+                this.startIdleAnimation();
+            }
         };
         
         resizeCanvas();
@@ -249,6 +281,11 @@ class ParticipantView {
         window.electronAPI.onVolumeChange((volume) => {
             this.setVolume(volume);
         });
+        
+        // Contrôle du voile noir
+        window.electronAPI.onToggleVeil((show) => {
+            this.toggleVeil(show);
+        });
     }
 
     // === Gestion des médias ===
@@ -277,7 +314,14 @@ class ParticipantView {
         if (this.condition === 'human') {
             await this.playVideo(mediaId, loop);
         } else {
-            await this.playAudio(mediaId, loop);
+            // En condition abstraite
+            if (mediaId === 'idle') {
+                // Pour l'idle, afficher la visualisation statique
+                await this.showStaticVisualization();
+            } else {
+                // Pour les autres médias, jouer l'audio normalement
+                await this.playAudio(mediaId, loop);
+            }
         }
     }
 
@@ -471,11 +515,110 @@ class ParticipantView {
         });
     }
 
+    async showStaticVisualization() {
+        console.log('[ABSTRACT IDLE] Démarrage visualisation idle animée');
+        
+        // Arrêter toute animation en cours
+        this.stopAudioVisualization();
+        
+        // Démarrer l'animation idle continue
+        this.startIdleAnimation();
+        
+        this.currentMedia = 'idle';
+        this.isIdleLooping = true;
+    }
+    
+    startIdleAnimation() {
+        // Animation continue pour l'idle - douce et subtile
+        const draw = () => {
+            this.animationId = requestAnimationFrame(draw);
+            
+            // Effacer le canvas avec traînée plus forte pour transition douce
+            this.canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            this.canvasCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            const centerX = this.canvas.width / 2;
+            const centerY = this.canvas.height / 2;
+            const time = Date.now() / 1000;
+            
+            // Pulsation très douce du cercle central
+            const pulse = (Math.sin(time * 0.3) + 1) / 2; // Plus lent
+            const baseRadius = 100 + (pulse * 15); // Amplitude réduite
+            
+            // Gradient pour le cercle central
+            const gradient = this.canvasCtx.createRadialGradient(
+                centerX, centerY, 0,
+                centerX, centerY, baseRadius
+            );
+            gradient.addColorStop(0, `rgba(255, 255, 255, ${0.5 + pulse * 0.2})`);
+            gradient.addColorStop(0.5, `rgba(230, 230, 230, ${0.3 + pulse * 0.2})`);
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+            
+            // Dessiner le cercle central
+            this.canvasCtx.fillStyle = gradient;
+            this.canvasCtx.beginPath();
+            this.canvasCtx.arc(centerX, centerY, baseRadius, 0, Math.PI * 2);
+            this.canvasCtx.fill();
+            
+            // Dessiner les barres avec animation très douce
+            const barCount = 64;
+            const angleStep = (Math.PI * 2) / barCount;
+            
+            for (let i = 0; i < barCount; i++) {
+                const angle = i * angleStep;
+                // Onde très douce pour les barres
+                const wave = Math.sin(time * 0.8 + i * 0.15) * 0.5 + 0.5;
+                const barHeight = 5 + (wave * 10); // Hauteur réduite
+                
+                const x1 = centerX + Math.cos(angle) * (baseRadius + 20);
+                const y1 = centerY + Math.sin(angle) * (baseRadius + 20);
+                const x2 = centerX + Math.cos(angle) * (baseRadius + 20 + barHeight);
+                const y2 = centerY + Math.sin(angle) * (baseRadius + 20 + barHeight);
+                
+                this.canvasCtx.strokeStyle = `rgba(255, 255, 255, ${0.15 + wave * 0.2})`;
+                this.canvasCtx.lineWidth = 2;
+                this.canvasCtx.lineCap = 'round';
+                this.canvasCtx.beginPath();
+                this.canvasCtx.moveTo(x1, y1);
+                this.canvasCtx.lineTo(x2, y2);
+                this.canvasCtx.stroke();
+            }
+            
+            // Cercle externe qui pulse très doucement
+            this.canvasCtx.strokeStyle = `rgba(255, 255, 255, ${0.08 + pulse * 0.05})`;
+            this.canvasCtx.lineWidth = 1;
+            this.canvasCtx.beginPath();
+            this.canvasCtx.arc(centerX, centerY, baseRadius * 1.5 + (pulse * 5), 0, Math.PI * 2);
+            this.canvasCtx.stroke();
+        };
+        
+        draw();
+    }
+
     async playAudio(mediaId, loop) {
+        console.log(`[PLAY AUDIO] Lecture de ${mediaId}`);
         const audioPath = this.getMediaPath(mediaId, 'audio');
         
-        // Masquer l'animation idle
-        document.getElementById('abstractIdle').classList.add('audio-playing');
+        // Ne pas arrêter brusquement, faire un fondu
+        // L'animation idle va continuer jusqu'à ce que l'audio démarre
+        
+        // Initialiser le contexte audio si nécessaire
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.analyser = this.audioContext.createAnalyser();
+            this.analyser.fftSize = 256;
+            this.analyser.smoothingTimeConstant = 0.85; // Plus smooth
+            
+            // Créer la source une seule fois
+            const source = this.audioContext.createMediaElementSource(this.audioPlayer);
+            source.connect(this.analyser);
+            this.analyser.connect(this.audioContext.destination);
+        }
+        
+        // Débloquer le contexte si suspendu
+        if (this.audioContext.state === 'suspended') {
+            await this.audioContext.resume();
+        }
         
         // Charger et jouer l'audio
         this.audioPlayer.src = audioPath;
@@ -483,7 +626,17 @@ class ParticipantView {
         
         try {
             await this.audioPlayer.play();
+            
+            // Transition douce : attendre un peu avant d'arrêter l'animation idle
+            setTimeout(() => {
+                this.stopAudioVisualization();
+                // Démarrer la visualisation audio réelle
+                this.startAudioVisualization();
+            }, 300); // Petit délai pour une transition plus douce
+            
+            console.log(`[PLAY AUDIO] Audio ${mediaId} démarré avec visualisation`);
         } catch (error) {
+            console.error(`[PLAY AUDIO] Erreur: ${error.message}`);
             this.handleMediaError(`Erreur lecture audio: ${error.message}`);
         }
     }
@@ -508,9 +661,15 @@ class ParticipantView {
                 }
             }
         } else {
-            this.audioPlayer.pause();
+            // Condition abstraite
+            if (this.audioPlayer) {
+                this.audioPlayer.pause();
+                this.audioPlayer.currentTime = 0;
+                // Ne pas vider src pour éviter les erreurs
+            }
             this.stopAudioVisualization();
-            document.getElementById('abstractIdle').classList.remove('audio-playing');
+            // Démarrer l'animation idle
+            this.startIdleAnimation();
         }
         
         this.currentMedia = null;
@@ -530,8 +689,7 @@ class ParticipantView {
     
     startAudioVisualization() {
         if (!this.audioContext || !this.analyser) {
-            // Initialiser si pas encore fait
-            this.setupAudioContext();
+            console.error('[AUDIO VIS] Contexte audio non initialisé');
             return;
         }
         
@@ -559,14 +717,14 @@ class ParticipantView {
             const baseRadius = 100;
             const radius = baseRadius + (average / 255) * 100;
             
-            // Gradient pour le cercle
+            // Gradient pour le cercle - en blanc
             const gradient = this.canvasCtx.createRadialGradient(
                 centerX, centerY, 0,
                 centerX, centerY, radius
             );
-            gradient.addColorStop(0, `rgba(90, 103, 216, ${0.8 + (average / 255) * 0.2})`);
-            gradient.addColorStop(0.5, `rgba(118, 75, 162, ${0.6 + (average / 255) * 0.4})`);
-            gradient.addColorStop(1, 'rgba(90, 103, 216, 0)');
+            gradient.addColorStop(0, `rgba(255, 255, 255, ${0.8 + (average / 255) * 0.2})`);
+            gradient.addColorStop(0.5, `rgba(230, 230, 230, ${0.6 + (average / 255) * 0.4})`);
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
             
             this.canvasCtx.fillStyle = gradient;
             this.canvasCtx.beginPath();
@@ -587,7 +745,7 @@ class ParticipantView {
                 const x2 = centerX + Math.cos(angle) * (radius + 20 + barHeight);
                 const y2 = centerY + Math.sin(angle) * (radius + 20 + barHeight);
                 
-                this.canvasCtx.strokeStyle = `hsla(${250 + (value / 255) * 60}, 70%, ${50 + (value / 255) * 30}%, ${0.5 + (value / 255) * 0.5})`;
+                this.canvasCtx.strokeStyle = `rgba(255, 255, 255, ${0.5 + (value / 255) * 0.5})`;
                 this.canvasCtx.lineWidth = 3;
                 this.canvasCtx.lineCap = 'round';
                 this.canvasCtx.beginPath();
@@ -598,7 +756,7 @@ class ParticipantView {
             
             // Onde circulaire
             if (average > 50) {
-                this.canvasCtx.strokeStyle = `rgba(90, 103, 216, ${(average - 50) / 205})`;
+                this.canvasCtx.strokeStyle = `rgba(255, 255, 255, ${(average - 50) / 205})`;
                 this.canvasCtx.lineWidth = 2;
                 this.canvasCtx.beginPath();
                 this.canvasCtx.arc(centerX, centerY, radius * 1.5, 0, Math.PI * 2);
@@ -614,10 +772,7 @@ class ParticipantView {
             cancelAnimationFrame(this.animationId);
             this.animationId = null;
         }
-        
-        // Effacer le canvas
-        this.canvasCtx.fillStyle = '#000000';
-        this.canvasCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        // Ne pas effacer le canvas - on garde la visualisation visible
     }
 
     // === Changement de condition ===
@@ -711,19 +866,22 @@ class ParticipantView {
                 // Ne pas bloquer si le préchargement échoue
             }
         } else {
-            const audioPath = this.getMediaPath(mediaId, 'audio');
-            const audio = new Audio(audioPath);
-            audio.preload = 'auto';
-            
-            await new Promise((resolve, reject) => {
-                audio.addEventListener('canplaythrough', resolve, { once: true });
-                audio.addEventListener('error', reject, { once: true });
-                setTimeout(reject, 10000); // Timeout 10s
-            }).catch(error => {
-                console.error(`[PRELOAD] Échec audio ${mediaId}:`, error);
-            });
-            
-            this.mediaCache.set(mediaId, audio);
+            // Pour la condition abstraite, ne précharger que les fichiers audio (pas l'idle)
+            if (mediaId !== 'idle') {
+                const audioPath = this.getMediaPath(mediaId, 'audio');
+                const audio = new Audio(audioPath);
+                audio.preload = 'auto';
+                
+                await new Promise((resolve, reject) => {
+                    audio.addEventListener('canplaythrough', resolve, { once: true });
+                    audio.addEventListener('error', reject, { once: true });
+                    setTimeout(reject, 10000); // Timeout 10s
+                }).catch(error => {
+                    console.error(`[PRELOAD] Échec audio ${mediaId}:`, error);
+                });
+                
+                this.mediaCache.set(mediaId, audio);
+            }
         }
     }
 
@@ -780,22 +938,37 @@ class ParticipantView {
         this.isTransitioning = false;
         this.nextVideoQueue = null;
         
-        // Nettoyer les deux lecteurs
-        if (this.videoPlayer1.src && !this.videoPlayer1.paused && !this.videoPlayer1.src.includes('idle.mp4')) {
-            this.videoPlayer1.pause();
-            this.videoPlayer1.currentTime = 0;
-        }
-        if (this.videoPlayer2.src && !this.videoPlayer2.paused && !this.videoPlayer2.src.includes('idle.mp4')) {
-            this.videoPlayer2.pause();
-            this.videoPlayer2.currentTime = 0;
+        // Nettoyer selon la condition
+        if (this.condition === 'human') {
+            // Nettoyer les deux lecteurs vidéo
+            if (this.videoPlayer1.src && !this.videoPlayer1.paused && !this.videoPlayer1.src.includes('idle.mp4')) {
+                this.videoPlayer1.pause();
+                this.videoPlayer1.currentTime = 0;
+            }
+            if (this.videoPlayer2.src && !this.videoPlayer2.paused && !this.videoPlayer2.src.includes('idle.mp4')) {
+                this.videoPlayer2.pause();
+                this.videoPlayer2.currentTime = 0;
+            }
+        } else {
+            // En condition abstraite, arrêter la visualisation
+            this.stopAudioVisualization();
+            // Arrêter l'audio proprement sans vider la source (pour éviter les erreurs)
+            if (this.audioPlayer) {
+                this.audioPlayer.pause();
+                this.audioPlayer.currentTime = 0;
+            }
+            // Transition très douce vers l'idle avec fondu progressif
+            this.fadeToIdle();
         }
         
         console.log(`[MEDIA ENDED] Retour à l'idle après ${previousMedia}`);
         
         // Retour à l'idle avec un petit délai
         setTimeout(() => {
-            // Marquer qu'on retourne à l'idle après un autre média
-            this.returningToIdle = wasPlayingNonIdle;
+            // Marquer qu'on retourne à l'idle après un autre média (seulement pour condition humaine)
+            if (this.condition === 'human') {
+                this.returningToIdle = wasPlayingNonIdle;
+            }
             this.currentMedia = 'idle';
             this.playMedia({ mediaId: 'idle', loop: true });
         }, 200);
@@ -863,6 +1036,50 @@ class ParticipantView {
 
     hideError() {
         document.getElementById('errorMessage').classList.remove('show');
+    }
+    
+    // === Gestion du voile noir ===
+    
+    toggleVeil(show) {
+        if (show) {
+            this.blackVeil.classList.add('active');
+            console.log('[VEIL] Voile activé');
+        } else {
+            this.blackVeil.classList.remove('active');
+            console.log('[VEIL] Voile retiré');
+        }
+    }
+    
+    // === Transition douce vers l'idle ===
+    
+    fadeToIdle() {
+        // Créer un fondu progressif vers l'idle
+        let fadeFrames = 0;
+        const maxFadeFrames = 60; // 1 seconde à 60fps
+        
+        const doFade = () => {
+            fadeFrames++;
+            
+            // Calculer l'opacité de transition (0 -> 1)
+            const fadeFactor = fadeFrames / maxFadeFrames;
+            
+            // Appliquer un fondu noir progressif
+            this.canvasCtx.fillStyle = `rgba(0, 0, 0, ${fadeFactor * 0.8})`;
+            this.canvasCtx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            if (fadeFrames < maxFadeFrames) {
+                requestAnimationFrame(doFade);
+            } else {
+                // Une fois le fondu terminé, arrêter l'audio et démarrer l'idle
+                this.stopAudioVisualization();
+                // Démarrer l'animation idle après un court délai
+                setTimeout(() => {
+                    this.startIdleAnimation();
+                }, 200);
+            }
+        };
+        
+        doFade();
     }
 }
 
